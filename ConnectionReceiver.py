@@ -1,3 +1,4 @@
+import socket
 from threading import Thread
 from ConnectionBase import ConnectionBase
 
@@ -8,21 +9,30 @@ class ConnectionReceiver(ConnectionBase):
     def __init__(self):
         super().__init__()
         self.set_status_callback(lambda x: print(x))
+        self.listen_thread = None
 
     def start_listening(self, host=None, port=None):
         if host:
-            self.host = host
+            self.host = str(host)
         if port:
-            self.port = port
+            self.port = int(port)
 
         self.socket.bind((self.host, self.port))
-        Thread(target=self.listen_on_socket).start()
+        Thread(target=self.listen_on_socket_thread).start()
 
-    def listen_on_socket(self):
+    def stop_listening(self):
+        self.socket.close()
+        self.socket = socket.socket()
+        self.change_status("Idle")
+
+    def listen_on_socket_thread(self):
         self.socket.listen(5)
+        self.change_status("Listening on " + str(self.host) + ":" + str(self.port))
         while True:
-            self.change_status("Listening on port " + str(self.port))
-            self.connection, address = self.socket.accept()
+            try:
+                self.connection, address = self.socket.accept()
+            except:
+                break
             self.change_status("Got connection from " + str(address))
             line_of_file = self.connection.recv(self.chunk_size)
             while line_of_file:
@@ -41,7 +51,6 @@ class ConnectionReceiver(ConnectionBase):
         # file header
         if line.startswith(self.make_sendable_command(self.comm_file_header)):
             file_name = line[len(self.make_sendable_command(self.comm_file_header)):]
-            self.change_status("FileName  " + str(file_name))
             self.file = open(file_name, 'wb')
             return True
 
@@ -49,13 +58,11 @@ class ConnectionReceiver(ConnectionBase):
         if line.startswith(self.make_sendable_command(self.comm_file_chunks)):
             self.file_chunks_received = 0
             self.file_chunks_total = int(line[len(self.make_sendable_command(self.comm_file_header)):])
-            self.change_status("File chunks " + str(self.file_chunks_total))
             return True
 
         # end command
         if line.startswith(self.make_sendable_command(self.comm_end_trans)):
             self.end_receiving()
-            self.change_status("End Signal")
             return True
 
     def end_receiving(self):

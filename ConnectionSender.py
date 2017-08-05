@@ -7,6 +7,7 @@ class ConnectionSender(ConnectionBase):
 
     def __init__(self):
         super().__init__()
+        self.host = "192.168.0.14"
         self.set_status_callback(lambda x: print(x))
 
     def send_file(self, file_path, host=None, port=None):
@@ -35,4 +36,4 @@ class ConnectionSender(ConnectionBase):
 
 if __name__ == '__main__':
     rec = ConnectionSender()
-    rec.send_file(b'tosend.png')
+    rec.send_file(b'_test_tosend.png')
