@@ -45,7 +45,7 @@ class ConnectionReceiver(ConnectionBase):
                 else:
                     break
 
-            self.change_status("Done Receiving")
+            self.end_receiving()
 
     def parse_received_line(self, line: str):
         # file header
@@ -66,8 +66,10 @@ class ConnectionReceiver(ConnectionBase):
             return True
 
     def end_receiving(self):
-        self.file.close()
+        if not self.file.closed:
+            self.file.close()
         self.connection = None
+        self.change_status("Done Receiving")
 
 
 if __name__ == '__main__':

@@ -48,7 +48,12 @@ class ConnectionBase(object):
         ip_regex = re.compile('^[\s]+IPv4[\w\s.]+:[\s]*(([\d]{0,3}.){4})')
         section_name = ""
         while True:
-            line = proc.stdout.readline().decode("utf-8")
+            try:
+                line = proc.stdout.readline().decode("utf-8")
+            except:
+                # I've encountered UTF error here - it's safest to assume that it's on Adapter name
+                if len(section_name) == 0:
+                    line = "Unknown:"
             if line != '':
                 name_search = name_regex.search(line)
                 if name_search:
