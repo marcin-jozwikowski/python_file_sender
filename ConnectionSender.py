@@ -2,6 +2,8 @@ from threading import Thread
 
 import time
 
+import os
+
 from ConnectionBase import ConnectionBase
 
 
@@ -25,7 +27,7 @@ class ConnectionSender(ConnectionBase):
         self.set_socket()
         self.socket.connect((self.host, self.port))
         self.file = open(file_path, 'rb')
-        new_file_name = self.make_sendable_command(self.comm_file_header) + str.encode("__new_" + file_path)
+        new_file_name = self.make_sendable_command(self.comm_file_header) + str.encode(os.path.basename(file_path))
         self.socket.send(new_file_name.ljust(self.chunk_size, b' '))
         self.change_status('Sending...')
         self.file_chunks_sent = 0

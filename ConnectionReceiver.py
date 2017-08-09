@@ -33,6 +33,7 @@ class ConnectionReceiver(ConnectionBase):
         while True:
             try:
                 self.connection, address = self.socket.accept()
+                self.file_chunks_received = 0
             except:
                 break
             self.change_status("Got connection from " + str(address))
@@ -42,7 +43,7 @@ class ConnectionReceiver(ConnectionBase):
                 if not line_has_been_parsed:
                     self.file.write(line_of_file)
                     self.file_chunks_received += 1
-                    print("Got chunk " + str(self.file_chunks_received))
+                    self.change_status("Got chunk " + str(self.file_chunks_received))
                 if self.connection:
                     line_of_file = self.connection.recv(self.chunk_size)
                 else:
