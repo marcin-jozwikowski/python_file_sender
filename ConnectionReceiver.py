@@ -8,6 +8,7 @@ class ConnectionReceiver(ConnectionBase):
 
     def __init__(self):
         super().__init__()
+        self.set_socket()
         self.set_status_callback(lambda x: print(x))
         self.listen_thread = None
 
@@ -18,7 +19,8 @@ class ConnectionReceiver(ConnectionBase):
             self.port = int(port)
 
         self.socket.bind((self.host, self.port))
-        Thread(target=self.listen_on_socket_thread).start()
+        thread = Thread(target=self.listen_on_socket_thread)
+        thread.start()
 
     def stop_listening(self):
         self.socket.close()
@@ -40,6 +42,7 @@ class ConnectionReceiver(ConnectionBase):
                 if not line_has_been_parsed:
                     self.file.write(line_of_file)
                     self.file_chunks_received += 1
+                    print("Got chunk " + str(self.file_chunks_received))
                 if self.connection:
                     line_of_file = self.connection.recv(self.chunk_size)
                 else:
@@ -51,7 +54,7 @@ class ConnectionReceiver(ConnectionBase):
         # file header
         if line.startswith(self.make_sendable_command(self.comm_file_header)):
             file_name = line[len(self.make_sendable_command(self.comm_file_header)):]
-            self.file = open(file_name, 'wb')
+            self.file = open(file_name.strip(), 'wb')
             return True
 
         # file size
@@ -68,7 +71,6 @@ class ConnectionReceiver(ConnectionBase):
     def end_receiving(self):
         if not self.file.closed:
             self.file.close()
-        self.connection = None
         self.change_status("Done Receiving")
 
 

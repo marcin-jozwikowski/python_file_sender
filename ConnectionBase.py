@@ -20,8 +20,10 @@ class ConnectionBase(object):
     comm_file_chunks = b'CHUNKS'
 
     def __init__(self):
-        self.socket = socket.socket()
         self.host = socket.gethostname()
+
+    def set_socket(self):
+        self.socket = socket.socket()
 
     @staticmethod
     def make_sendable_command(text):
