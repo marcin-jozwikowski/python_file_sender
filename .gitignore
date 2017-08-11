@@ -1,3 +1,5 @@
 .idea
 __pycache__
 _test_*.*
+build/
+dist/
