@@ -2,18 +2,22 @@ import platform
 import socket
 import subprocess
 import re
+import time
 
 
 class ConnectionBase(object):
     chunk_size = 1024
-    socket = None
     host = None
     port = 12345
     status = None
+
+    socket = None
     statusCallback = None
     connection = None
-    file = None
+
     file_chunks_total = 0
+    file_chunks_parsed = 0
+    thread = None
 
     comm_end_trans = b'END'
     comm_file_header = b'FILE'
@@ -29,7 +33,7 @@ class ConnectionBase(object):
     def make_sendable_command(text):
         return b'[' + text + b']'
 
-    def change_status(self, status: str):
+    def _change_status(self, status: str):
         self.status = status
         if hasattr(self.statusCallback, '__call__'):
             self.statusCallback(status)
@@ -40,10 +44,10 @@ class ConnectionBase(object):
     def get_all_ips(self):
         sys_name = platform.system()
         if sys_name == 'Windows':
-            return self.get_windows_ips()
+            return self._get_windows_ips()
         raise Exception('System not supported: ' + sys_name)
 
-    def get_windows_ips(self):
+    def _get_windows_ips(self):
         ips = {}
         proc = subprocess.Popen(['ipconfig'], stdout=subprocess.PIPE)
         name_regex = re.compile('^([A-Za-z0-9 \-_])+:')
@@ -67,6 +71,16 @@ class ConnectionBase(object):
             else:
                 break
         return ips
+
+    def _send_standard_command(self, command, value):
+        text_value = self.make_sendable_command(command) + str.encode(value)
+        self.socket.send(text_value.ljust(self.chunk_size, b' '))
+
+    def _update_status_transfer_change(self, message):
+        if self.file_chunks_parsed % self.chunk_size == 0:
+            percentage = (self.file_chunks_parsed / self.file_chunks_total) * 100
+            self._change_status(str(message) + str("%.2f" % percentage) + '%')
+            time.sleep(0.001)
 
 if __name__ == '__main__':
     print("Class not callable")

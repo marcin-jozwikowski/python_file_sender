@@ -1,8 +1,9 @@
 from tkinter import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from tkinter.ttk import *
 from ConnectionReceiver import ConnectionReceiver
 from ConnectionSender import ConnectionSender
+import os
 
 
 class FileTransfer(object):
@@ -15,7 +16,7 @@ class FileTransfer(object):
         self.connection_receiver.set_status_callback(self.receiver_status_callback)
         self.all_ips = self.connection_receiver.get_all_ips()
         self.connection_sender = ConnectionSender()
-        self.connection_sender.set_status_callback(self.sender_status_callbakc)
+        self.connection_sender.set_status_callback(self.sender_status_callback)
 
         self.top = Tk()
 
@@ -72,9 +73,9 @@ class FileTransfer(object):
 
         # sender status label
         self.sender_status = StringVar()
-        sender_status_label = Label(sender_frame, textvariable=self.sender_status)
+        self.sender_status_label = Label(sender_frame, textvariable=self.sender_status)
         self.sender_status.set("Idle")
-        sender_status_label.pack()
+        self.sender_status_label.pack()
 
         choose_file_button = Button(sender_frame, text='Choose File', command=self.choose_file)
         choose_file_button.pack(fill=X, expand=1)
@@ -88,6 +89,8 @@ class FileTransfer(object):
         self.send_button = Button(sender_frame, text='Send', command=self.send_files)
         self.send_button.pack(fill=X, expand=1)
         sender_frame.pack(fill=BOTH)
+
+        self.top.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
     def choose_file(self):
         file_path = filedialog.askopenfilename()
@@ -108,17 +111,28 @@ class FileTransfer(object):
 
     def receiver_status_callback(self, status):
         self.receiver_status.set(status)
-        print("Rec " + status)
 
-    def sender_status_callbakc(self, status):
+    def sender_status_callback(self, status):
         self.sender_status.set(status)
-        print("Sen " + status)
+        self.sender_status_label.update()
 
     def send_files(self):
-        host_ip = self.sender_ip_box_value.get()
-        port = self.sender_port_box_value.get()
         path = self.sent_file_path.get()
-        self.connection_sender.send_file(file_path=path, host=host_ip, port=port)
+        if os.path.isfile(path):
+            host_ip = self.sender_ip_box_value.get()
+            port = self.sender_port_box_value.get()
+            try:
+                self.connection_sender.send_file(file_path=path, host=host_ip, port=port)
+            except ConnectionRefusedError:
+                messagebox.showerror("Error", "Could not connect")
+            except:
+                messagebox.showerror("Error", "Could not send")
+        else:
+            messagebox.showerror("Error", "No file selected for sending")
+
+    def on_window_close(self):
+        self.stop_listening_for_connections()
+        self.top.quit()
 
 
 if __name__ == '__main__':

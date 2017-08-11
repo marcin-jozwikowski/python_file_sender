@@ -8,11 +8,10 @@ from ConnectionBase import ConnectionBase
 
 
 class ConnectionSender(ConnectionBase):
-    file_chunks_sent = 0
-
     def __init__(self):
         super().__init__()
-        self.host = "192.168.0.14"
+        self.thread = None
+        self.host = ""
         self.set_status_callback(lambda x: print(x))
 
     def send_file(self, file_path, host=None, port=None):
@@ -20,30 +19,37 @@ class ConnectionSender(ConnectionBase):
             self.host = str(host)
         if port:
             self.port = int(port)
-        thread = Thread(target=self.send_file_in_chunks(file_path))
-        thread.start()
+        self.thread = Thread(target=self._send_file_in_chunks(file_path))
+        self.thread.start()
 
-    def send_file_in_chunks(self, file_path):
+    def _send_file_in_chunks(self, file_path):
         self.set_socket()
         self.socket.connect((self.host, self.port))
-        self.file = open(file_path, 'rb')
-        new_file_name = self.make_sendable_command(self.comm_file_header) + str.encode(os.path.basename(file_path))
-        self.socket.send(new_file_name.ljust(self.chunk_size, b' '))
-        self.change_status('Sending...')
-        self.file_chunks_sent = 0
-        line_of_file = self.file.read(self.chunk_size)
+        file = self._open_file_for_sending(file_path)
+        line_of_file = file.read(self.chunk_size)
         while line_of_file:
             self.socket.send(line_of_file)
-            line_of_file = self.file.read(self.chunk_size)
-            self.file_chunks_sent += 1
-            self.change_status('Sending... ' + str(self.file_chunks_sent))
-        self.file.close()
+            line_of_file = file.read(self.chunk_size)
+            self.file_chunks_parsed += 1
+            super()._update_status_transfer_change('Sending ')
+        file.close()
         self.socket.send(self.make_sendable_command(self.comm_end_trans))
-        self.change_status("Done Sending")
+        self._change_status("Done Sending")
         self.socket.shutdown(1)
         self.socket.close()
 
+    def _open_file_for_sending(self, file_path):
+        file = open(file_path, 'rb')
+        self.file_chunks_total = self.get_file_size(file_path)
+        self._send_standard_command(self.comm_file_header, os.path.basename(file_path))
+        self._send_standard_command(self.comm_file_chunks, str(round(self.file_chunks_total)))
+        self.file_chunks_parsed = 0
+        return file
+
+    def get_file_size(self, file_path):
+        return os.stat(file_path).st_size / self.chunk_size
+
 
 if __name__ == '__main__':
-    rec = ConnectionSender()
-    rec.send_file("_test_tosend.png")
+    print("Class not callable")
+
