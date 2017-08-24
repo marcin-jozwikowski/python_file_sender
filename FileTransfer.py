@@ -29,7 +29,7 @@ class FileTransfer(object):
         # SelectBox + port input in one Frame
         receiver_ips_selector = Frame(receiver_frame)
         self.receiver_port_number_value = StringVar()
-        self.receiver_port_number_value.set(ConnectionReceiver.port)
+        self.receiver_port_number_value.set(self.connection_receiver.get_port())
         port_number = Entry(receiver_ips_selector, textvariable=self.receiver_port_number_value)
         port_number.pack(side=RIGHT)
         self.receiver_ip_box_value = StringVar()
@@ -61,7 +61,7 @@ class FileTransfer(object):
         self.sender_ip_box_value = StringVar()
         self.sender_ip_box_value.set(self.get_single_host_ip(list(self.all_ips.values())[0]))
         self.sender_port_box_value = StringVar()
-        self.sender_port_box_value.set(self.connection_sender.port)
+        self.sender_port_box_value.set(self.connection_sender.get_port())
 
         # sender IP input + port input
         sender_ip_selector_frame = Frame(sender_frame)
