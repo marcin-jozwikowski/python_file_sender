@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 from tkinter.ttk import *
 from ConnectionReceiver import ConnectionReceiver
 from ConnectionSender import ConnectionSender
+from queue import Queue
 import os
 
 
@@ -10,8 +11,10 @@ class FileTransfer(object):
 
     connection_receiver = None
     all_ips = {}
+    files_to_send = Queue()
 
     def __init__(self):
+        self._is_sending = False
         self.connection_receiver = ConnectionReceiver()
         self.connection_receiver.set_status_callback(self.receiver_status_callback)
         self.all_ips = self.connection_receiver.get_all_ips()
@@ -77,13 +80,13 @@ class FileTransfer(object):
         self.sender_status.set("Idle")
         self.sender_status_label.pack()
 
-        choose_file_button = Button(sender_frame, text='Choose File', command=self.choose_file)
+        choose_file_button = Button(sender_frame, text='Add File', command=self.add_file)
         choose_file_button.pack(fill=X, expand=1)
 
         # sender status label
-        self.sent_file_path = StringVar()
-        sent_file_path_label = Label(sender_frame, textvariable=self.sent_file_path)
-        self.sent_file_path.set("")
+        self.sent_file_label_value = StringVar()
+        sent_file_path_label = Label(sender_frame, textvariable=self.sent_file_label_value)
+        self.sent_file_label_value.set("")
         sent_file_path_label.pack()
 
         self.send_button = Button(sender_frame, text='Send', command=self.send_files)
@@ -93,9 +96,13 @@ class FileTransfer(object):
         self.top.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
     #chose file button callback
-    def choose_file(self):
+    def add_file(self):
         file_path = filedialog.askopenfilename()
-        self.sent_file_path.set(file_path)
+        self.files_to_send.put(file_path)
+        self.update_sent_file_label()
+
+    def update_sent_file_label(self):
+        self.sent_file_label_value.set("Files to send " + str(self.files_to_send.qsize()))
 
     #get host IP based on index of selected item
     def get_single_host_ip(self, index):
@@ -123,18 +130,24 @@ class FileTransfer(object):
         self.sender_status_label.update()
 
     def send_files(self):
-        path = self.sent_file_path.get()
-        if os.path.isfile(path):
+        if not self._is_sending:  # if is not sending already
+            self._is_sending = True
             host_ip = self.sender_ip_box_value.get()
             port = self.sender_port_box_value.get()
-            try:
-                self.connection_sender.send_file(file_path=path, host=host_ip, port=port)
-            except ConnectionRefusedError:
-                messagebox.showerror("Error", "Could not connect")
-            except:
-                messagebox.showerror("Error", "Could not send")
-        else:
-            messagebox.showerror("Error", "No file selected for sending")
+            while True:  # start sending in an infinite loop
+                if self.files_to_send.qsize() > 0:  # if there is anything to send
+                    path = self.files_to_send.get()  # get next file in queue
+                    self.update_sent_file_label()
+                    try:
+                        # send the file
+                        self.connection_sender.send_file(file_path=path, host=host_ip, port=port)
+                    except ConnectionRefusedError:
+                        messagebox.showerror("Error", "Could not connect")
+                    except:
+                        messagebox.showerror("Error", "Could not send")
+                else:
+                    break  # no files left to send - breaking the loop
+            self._is_sending = False  # done sending
 
     def on_window_close(self):
         self.stop_listening_for_connections()
