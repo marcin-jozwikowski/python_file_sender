@@ -92,26 +92,32 @@ class FileTransfer(object):
 
         self.top.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
+    #chose file button callback
     def choose_file(self):
         file_path = filedialog.askopenfilename()
         self.sent_file_path.set(file_path)
 
+    #get host IP based on index of selected item
     def get_single_host_ip(self, index):
         return {v: k for k, v in self.all_ips.items()}[index]
 
+    #start listening for connections on connection_receiver - butotn callback
     def start_listening_for_connections(self):
         host_ip = self.get_single_host_ip(self.receiver_ip_box_value.get())
         port = self.receiver_port_number_value.get()
         self.connection_receiver.start_listening(host_ip, port)
         self.listen_button.configure(text="Stop Listening", command=self.stop_listening_for_connections)
 
+    #stop listening for connections - button callback
     def stop_listening_for_connections(self):
         self.connection_receiver.stop_listening()
         self.listen_button.configure(text='Start Listening', command=self.start_listening_for_connections)
 
+    #callback for status change
     def receiver_status_callback(self, status):
         self.receiver_status.set(status)
 
+    #callback for status change
     def sender_status_callback(self, status):
         self.sender_status.set(status)
         self.sender_status_label.update()
