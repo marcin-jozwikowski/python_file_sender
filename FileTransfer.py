@@ -1,10 +1,15 @@
 from tkinter import *
 from tkinter import filedialog, messagebox
 from tkinter.ttk import *
+
+import time
+
 from ConnectionReceiver import ConnectionReceiver
 from ConnectionSender import ConnectionSender
 from queue import Queue
 import os
+from os import listdir
+from os.path import isfile, join
 
 
 class FileTransfer(object):
@@ -81,25 +86,49 @@ class FileTransfer(object):
         self.sender_status_label.pack()
 
         choose_file_button = Button(sender_frame, text='Add File', command=self.add_file)
-        choose_file_button.pack(fill=X, expand=1)
+        choose_file_button.pack(side=LEFT, fill=BOTH, expand=1)
+        choose_directory_button = Button(sender_frame, text='Add Directory', command=self.add_directory)
+        choose_directory_button.pack(side=RIGHT, fill=BOTH, expand=1)
+        sender_frame.pack(fill=BOTH)
 
         # sender status label
+        send_button_frame = Frame(self.top)
         self.sent_file_label_value = StringVar()
-        sent_file_path_label = Label(sender_frame, textvariable=self.sent_file_label_value)
+        sent_file_path_label = Label(send_button_frame, textvariable=self.sent_file_label_value)
         self.sent_file_label_value.set("")
         sent_file_path_label.pack()
 
-        self.send_button = Button(sender_frame, text='Send', command=self.send_files)
+        self.send_button = Button(send_button_frame, text='Send', command=self.send_files)
         self.send_button.pack(fill=X, expand=1)
-        sender_frame.pack(fill=BOTH)
+        send_button_frame.pack(fill=BOTH)
 
         self.top.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
     #chose file button callback
     def add_file(self):
         file_path = filedialog.askopenfilename()
-        self.files_to_send.put(file_path)
+        file_name = os.path.basename(file_path)
+        self._add_file_to_send(file_path, file_name)
+
+    def _add_file_to_send(self, file_path, file_name):
+        print(file_path)
+        self.files_to_send.put({'path': file_path, 'name': file_name})
         self.update_sent_file_label()
+
+    def add_directory(self):
+        directory_path = filedialog.askdirectory(title="Select A Directory", mustexist=1)
+        if directory_path is not None:
+            self.parse_directory(directory_path)
+
+    def parse_directory(self, base_directory, sub_directory=""):
+        directory_path = join(base_directory, sub_directory)
+        print("path:", directory_path)
+        for file in listdir(directory_path):
+            if isfile(join(directory_path, file)):
+                self._add_file_to_send(file_path=join(directory_path, file), file_name=join(sub_directory, file))
+            else:
+                new_subdirectory = join(sub_directory, file)
+                self.parse_directory(base_directory, new_subdirectory)
 
     def update_sent_file_label(self):
         self.sent_file_label_value.set("Files to send " + str(self.files_to_send.qsize()))
@@ -136,11 +165,12 @@ class FileTransfer(object):
             port = self.sender_port_box_value.get()
             while True:  # start sending in an infinite loop
                 if self.files_to_send.qsize() > 0:  # if there is anything to send
-                    path = self.files_to_send.get()  # get next file in queue
+                    file_to_send = self.files_to_send.get()  # get next file in queue
                     self.update_sent_file_label()
                     try:
                         # send the file
-                        self.connection_sender.send_file(file_path=path, host=host_ip, port=port)
+                        self.connection_sender.send_file(file_path=file_to_send['path'], file_name=file_to_send['name'],
+                                                         host=host_ip, port=port)
                     except ConnectionRefusedError:
                         messagebox.showerror("Error", "Could not connect")
                     except:

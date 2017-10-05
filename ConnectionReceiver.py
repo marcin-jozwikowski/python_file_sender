@@ -1,5 +1,10 @@
 import socket
 from threading import Thread
+
+import os
+
+from os.path import join
+
 from ConnectionBase import ConnectionBase
 
 
@@ -54,7 +59,11 @@ class ConnectionReceiver(ConnectionBase):
         # file header
         if line.startswith(self.make_sendable_command(self.comm_file_header)):
             file_name = line[len(self.make_sendable_command(self.comm_file_header)):]
-            self.file = open(file_name.strip(), 'wb')
+            file_path = join(os.getcwd(), file_name.strip().decode())
+            file_path_directory = os.path.dirname(file_path)
+            if not os.path.exists(file_path_directory):
+                os.makedirs(file_path_directory)
+            self.file = open(file_path, 'wb')
             return True
 
         # file size

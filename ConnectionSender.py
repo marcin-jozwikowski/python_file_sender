@@ -14,18 +14,18 @@ class ConnectionSender(ConnectionBase):
         self._host = ""
         self.set_status_callback(lambda x: print(x))
 
-    def send_file(self, file_path, host=None, port=None):
+    def send_file(self, file_path, file_name=None, host=None, port=None):
         if host:
             self._host = str(host)
         if port:
             self._port = int(port)
-        self._thread = Thread(target=self._send_file_in_chunks(file_path))
+        self._thread = Thread(target=self._send_file_in_chunks(file_path, file_name))
         self._thread.start()
 
-    def _send_file_in_chunks(self, file_path):
+    def _send_file_in_chunks(self, file_path, file_name=None):
         self.set_socket()
         self._socket.connect((self._host, self._port))
-        file = self._open_file_for_sending(file_path)
+        file = self._open_file_for_sending(file_path, file_name)
         line_of_file = file.read(self._chunk_size)
         while line_of_file:
             self._socket.send(line_of_file)
@@ -38,10 +38,11 @@ class ConnectionSender(ConnectionBase):
         self._socket.shutdown(1)
         self._socket.close()
 
-    def _open_file_for_sending(self, file_path):
+    def _open_file_for_sending(self, file_path, file_name=None):
         file = open(file_path, 'rb')
+        file_name = os.path.basename(file_path) if file_name is None else file_name
         self._file_chunks_total = self.get_file_size(file_path)
-        self._send_standard_command(self.comm_file_header, os.path.basename(file_path))
+        self._send_standard_command(self.comm_file_header, file_name)
         self._send_standard_command(self.comm_file_chunks, str(round(self._file_chunks_total)))
         self._file_chunks_parsed = 0
         return file
