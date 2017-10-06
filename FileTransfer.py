@@ -1,15 +1,10 @@
 from tkinter import *
 from tkinter import filedialog, messagebox
 from tkinter.ttk import *
-
-import time
-
 from ConnectionReceiver import ConnectionReceiver
 from ConnectionSender import ConnectionSender
 from queue import Queue
 import os
-from os import listdir
-from os.path import isfile, join
 
 
 class FileTransfer(object):
@@ -111,23 +106,21 @@ class FileTransfer(object):
         self._add_file_to_send(file_path, file_name)
 
     def _add_file_to_send(self, file_path, file_name):
-        print(file_path)
         self.files_to_send.put({'path': file_path, 'name': file_name})
         self.update_sent_file_label()
 
     def add_directory(self):
         directory_path = filedialog.askdirectory(title="Select A Directory", mustexist=1)
         if directory_path is not None:
-            self.parse_directory(directory_path)
+            self.parse_directory(os.path.dirname(directory_path), os.path.basename(directory_path))
 
     def parse_directory(self, base_directory, sub_directory=""):
-        directory_path = join(base_directory, sub_directory)
-        print("path:", directory_path)
-        for file in listdir(directory_path):
-            if isfile(join(directory_path, file)):
-                self._add_file_to_send(file_path=join(directory_path, file), file_name=join(sub_directory, file))
+        directory_path = os.path.join(base_directory, sub_directory)
+        for file in os.listdir(directory_path):
+            if os.path.isfile(os.path.join(directory_path, file)):
+                self._add_file_to_send(file_path=os.path.join(directory_path, file), file_name=os.path.join(sub_directory, file))
             else:
-                new_subdirectory = join(sub_directory, file)
+                new_subdirectory = os.path.join(sub_directory, file)
                 self.parse_directory(base_directory, new_subdirectory)
 
     def update_sent_file_label(self):
